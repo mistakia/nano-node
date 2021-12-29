@@ -503,8 +503,8 @@ void nano::transport::tcp_channels::list_below_version (std::vector<std::shared_
 	nano::lock_guard<nano::mutex> lock (mutex);
 	// clang-format off
 	nano::transform_if (channels.get<random_access_tag> ().begin (), channels.get<random_access_tag> ().end (), std::back_inserter (channels_a),
-		[cutoff_version_a](auto & channel_a) { return channel_a.channel->get_network_version () < cutoff_version_a; },
-		[](auto const & channel) { return channel.channel; });
+                        [cutoff_version_a](auto & channel_a) { return channel_a.channel->get_network_version () < cutoff_version_a; },
+                        [](auto const & channel) { return channel.channel; });
 	// clang-format on
 }
 
@@ -513,8 +513,8 @@ void nano::transport::tcp_channels::list (std::deque<std::shared_ptr<nano::trans
 	nano::lock_guard<nano::mutex> lock (mutex);
 	// clang-format off
 	nano::transform_if (channels.get<random_access_tag> ().begin (), channels.get<random_access_tag> ().end (), std::back_inserter (deque_a),
-		[include_temporary_channels_a, minimum_version_a](auto & channel_a) { return channel_a.channel->get_network_version () >= minimum_version_a && (include_temporary_channels_a || !channel_a.channel->temporary); },
-		[](auto const & channel) { return channel.channel; });
+                        [include_temporary_channels_a, minimum_version_a](auto & channel_a) { return channel_a.channel->get_network_version () >= minimum_version_a && (include_temporary_channels_a || !channel_a.channel->temporary); },
+                        [](auto const & channel) { return channel.channel; });
 	// clang-format on
 }
 
@@ -578,6 +578,7 @@ void nano::transport::tcp_channels::start_tcp (nano::endpoint const & endpoint_a
 						}
 						else
 						{
+							node_l->logger.try_log ("Unable to send message through channel: ", ec.message ());
 							if (auto socket_l = channel->socket.lock ())
 							{
 								socket_l->close ();
@@ -593,6 +594,14 @@ void nano::transport::tcp_channels::start_tcp (nano::endpoint const & endpoint_a
 			}
 			else
 			{
+				if (!channel)
+				{
+					node_l->logger.try_log ("Unable to make socket connection, missing channel");
+				}
+				if (ec)
+				{
+					node_l->logger.try_log ("Error on socket connection: ", ec.message ());
+				}
 				node_l->network.tcp_channels.udp_fallback (endpoint_a);
 			}
 		}
@@ -699,6 +708,7 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 							}
 							else
 							{
+								node_l->logger.try_log ("Falling back to udp, message missing response or query property");
 								cleanup_and_udp_fallback (endpoint_a);
 							}
 						}
@@ -714,6 +724,7 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 					}
 					else
 					{
+						node_l->logger.try_log ("Falling back to udp, message type is not handshake");
 						cleanup_and_udp_fallback (endpoint_a);
 					}
 				}
